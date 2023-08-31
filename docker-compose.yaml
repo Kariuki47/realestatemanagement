@@ -1,0 +1,237 @@
+version: "3.9"
+services:
+  ###############################################################################
+  # Redis
+  ###############################################################################
+  redis:
+    image: redis:5
+    ports:
+      - '${REDIS_PORT}:6379'
+    volumes:
+      - ./data/redis:/data
+    command:
+      - 'bash'
+      - '-c'
+      - 'docker-entrypoint.sh --requirepass ${REDIS_PASSWORD}'
+    networks:
+      - net
+  ###############################################################################
+  # Mongo
+  ###############################################################################
+  mongo:
+    image: mongo:4.4
+    ports:
+      - ${MONGO_PORT}:27017
+    volumes:
+      - ./data/mongodb:/data/db
+      - ./backup:/backup
+    networks:
+      - net
+  ###############################################################################
+  # Gateway
+  ###############################################################################
+  gateway:
+    image: rem/gateway:latest
+    build:
+      context: .
+      dockerfile: services/gateway/dev.Dockerfile
+    environment:
+      - NODE_ENV
+      - LOGGER_LEVEL=${LOGGER_LEVEL}
+      - PORT=${GATEWAY_PORT}
+      - EXPOSE_FRONTENDS=${GATEWAY_EXPOSE_FRONTENDS}
+      - AUTHENTICATOR_URL=${AUTHENTICATOR_URL}
+      - MONGO_URL=${MONGO_URL}
+      - API_URL=${API_URL}
+      - PDFGENERATOR_URL=${PDFGENERATOR_URL}
+      - LANDLORD_FRONTEND_URL=${LANDLORD_FRONTEND_URL}
+      - LANDLORD_BASE_PATH=${LANDLORD_BASE_PATH}
+      - TENANT_FRONTEND_URL=${TENANT_FRONTEND_URL}
+      - TENANT_BASE_PATH=${TENANT_BASE_PATH}
+      - DOMAIN_URL=${DOMAIN_URL}
+      - CORS_ENABLED=${CORS_ENABLED}
+    ports:
+      - '${GATEWAY_PORT}:8080'
+    networks:
+      - net
+    depends_on:
+      - authenticator
+      - api
+      - pdfgenerator
+  ###############################################################################
+  # Authenticator
+  ###############################################################################
+  authenticator:
+    image: rem/authenticator:latest
+    build:
+      context: .
+      dockerfile: services/authenticator/dev.Dockerfile
+    environment:
+      - NODE_ENV
+      - PORT=${AUTHENTICATOR_PORT}
+      - LOGGER_LEVEL=${LOGGER_LEVEL}
+      - REDIS_URL=${REDIS_URL}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - ACCESS_TOKEN_SECRET=${AUTHENTICATOR_ACCESS_TOKEN_SECRET}
+      - REFRESH_TOKEN_SECRET=${AUTHENTICATOR_REFRESH_TOKEN_SECRET}
+      - RESET_TOKEN_SECRET=${AUTHENTICATOR_RESET_TOKEN_SECRET}
+      - MONGO_URL=${MONGO_URL}
+      - EMAILER_URL=${EMAILER_URL}
+      - SIGNUP=${SIGNUP}
+      - DOMAIN_URL=${DOMAIN_URL}
+    expose:
+      - '${AUTHENTICATOR_PORT}'
+    networks:
+      - net
+    depends_on:
+      - redis
+      - mongo
+      - emailer
+  ###############################################################################
+  # PDFGenerator
+  ###############################################################################
+  pdfgenerator:
+    image: rem/pdfgenerator:latest
+    build:
+      context: .
+      dockerfile: services/pdfgenerator/dev.Dockerfile
+    environment:
+      - NODE_ENV
+      - PORT=${PDFGENERATOR_PORT}
+      - LOGGER_LEVEL=${LOGGER_LEVEL}
+      - MONGO_URL=${MONGO_URL}
+      - ACCESS_TOKEN_SECRET=${AUTHENTICATOR_ACCESS_TOKEN_SECRET}
+      - CIPHER_KEY=${CIPHER_KEY}
+      - CIPHER_IV_KEY=${CIPHER_IV_KEY}
+    expose:
+      - '${PDFGENERATOR_PORT}'
+    networks:
+      - net
+    depends_on:
+      - mongo
+  ###############################################################################
+  # Emailer
+  ###############################################################################
+  emailer:
+    image: rem/emailer:latest
+    build:
+      context: .
+      dockerfile: services/emailer/dev.Dockerfile
+    environment:
+      - NODE_ENV
+      - ALLOW_SENDING_EMAILS=${ALLOW_SENDING_EMAILS}
+      - PORT=${EMAILER_PORT}
+      - LOGGER_LEVEL=${LOGGER_LEVEL}
+      - APP_NAME=${APP_NAME}
+      - LANDLORD_APP_URL=${LANDLORD_APP_URL}
+      - TENANT_APP_URL=${TENANT_APP_URL}
+      - MONGO_URL=${MONGO_URL}
+      - ACCESS_TOKEN_SECRET=${AUTHENTICATOR_ACCESS_TOKEN_SECRET}
+      - CIPHER_KEY=${CIPHER_KEY}
+      - CIPHER_IV_KEY=${CIPHER_IV_KEY}
+      - PDFGENERATOR_URL=${PDFGENERATOR_URL}
+      - MAILGUN_API_KEY=${MAILGUN_API_KEY}
+      - MAILGUN_DOMAIN=${MAILGUN_DOMAIN}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - EMAIL_REPLY_TO=${EMAIL_REPLY_TO}
+      - EMAIL_BCC=${EMAIL_BCC}
+    expose:
+      - '${EMAILER_PORT}'
+    networks:
+      - net
+    depends_on:
+      - mongo
+      - pdfgenerator
+  ###############################################################################
+  # api
+  ###############################################################################
+  api:
+    image: rem/api:latest
+    build:
+      context: .
+      dockerfile: services/api/dev.Dockerfile
+    volumes:
+      - ./backup:/usr/app/backup
+    environment:
+      - NODE_ENV
+      - PORT=${API_PORT}
+      - LOGGER_LEVEL=${LOGGER_LEVEL}
+      - MONGO_URL=${MONGO_URL}
+      - DEMO_MODE=${DEMO_MODE}
+      - EMAILER_URL=${EMAILER_URL}
+      - PDFGENERATOR_URL=${PDFGENERATOR_URL}
+      - RESTORE_DB=${RESTORE_DB}
+      - ACCESS_TOKEN_SECRET=${AUTHENTICATOR_ACCESS_TOKEN_SECRET}
+      - CIPHER_KEY=${CIPHER_KEY}
+      - CIPHER_IV_KEY=${CIPHER_IV_KEY}
+    expose:
+      - '${API_PORT}'
+    networks:
+      - net
+    depends_on:
+      - mongo
+      - emailer
+      - pdfgenerator
+  ###############################################################################
+  # Landlord frontend
+  ###############################################################################
+  landlord-frontend:
+    # base path cannot be set at runtime: https://github.com/vercel/next.js/discussions/41769
+    build:
+      context: .
+      dockerfile: webapps/landlord/dev.Dockerfile
+      args:
+        - LANDLORD_BASE_PATH=${LANDLORD_BASE_PATH}
+    image: rem/landlord-frontend:latest
+    environment:
+      - BASE_PATH=${LANDLORD_BASE_PATH}
+      - PORT=${LANDLORD_FRONTEND_PORT}
+      - DOCKER_GATEWAY_URL=${DOCKER_GATEWAY_URL}
+      - NEXT_PUBLIC_APP_NAME=${APP_NAME}
+      - NEXT_PUBLIC_BASE_PATH=${LANDLORD_BASE_PATH}
+      - NEXT_PUBLIC_CORS_ENABLED=${CORS_ENABLED}
+      - NEXT_PUBLIC_DEMO_MODE=${DEMO_MODE}
+      - NEXT_PUBLIC_GATEWAY_URL=${GATEWAY_URL}
+      - NEXT_PUBLIC_NODE_ENV=${NODE_ENV}
+      - NEXT_PUBLIC_SIGNUP=${SIGNUP}
+    expose:
+      - '${LANDLORD_FRONTEND_PORT}'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - net
+    depends_on:
+      - gateway
+  ###############################################################################
+  # Tenant frontend
+  ###############################################################################
+  tenant-frontend:
+    # base path cannot be set at runtime: https://github.com/vercel/next.js/discussions/41769
+    build:
+      context: .
+      dockerfile: webapps/tenant/dev.Dockerfile
+      args:
+        - TENANT_BASE_PATH=${TENANT_BASE_PATH}
+    image: rem/tenant-frontend:latest
+    environment:
+      - BASE_PATH=${TENANT_BASE_PATH}
+      - PORT=${TENANT_FRONTEND_PORT}
+      - DOCKER_GATEWAY_URL=${DOCKER_GATEWAY_URL}
+      - NEXT_PUBLIC_APP_NAME=${APP_NAME}
+      - NEXT_PUBLIC_BASE_PATH=${TENANT_BASE_PATH}
+      - NEXT_PUBLIC_DEMO_MODE=${DEMO_MODE}
+      - NEXT_PUBLIC_NODE_ENV=${NODE_ENV}
+    expose:
+      - '${TENANT_FRONTEND_PORT}'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    networks:
+      - net
+    depends_on:
+      - gateway
+###############################################################################
+# microservices network
+###############################################################################
+networks:
+  net:
+    driver: bridge

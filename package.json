@@ -1,0 +1,50 @@
+{
+  "name": "realestatemanagement",
+  "version": "1.0.0",
+  "description": "The application which helps the landlords to manage their property rents.",
+  "private": true,
+  "keywords": [
+    "property management",
+    "real-estate",
+    "rents",
+    "tenants",
+    "landlord",
+    "open-source"
+  ],
+  "author": "Joseph Kariuki",
+  "license": "MIT",
+  "workspaces": [
+    "services/*",
+    "webapps/*"
+  ],
+  "scripts": {
+    "format": "yarn workspaces foreach run format",
+    "lint": "yarn workspaces foreach run lint"
+  },
+  "lint-staged": {
+    "*.{js,ts,tsx, jsx}": [
+      "eslint --quiet --fix"
+    ],
+    "*.{json,md,html,js,jsx,ts,tsx}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "eslint": "8.36.0",
+    "eslint-config-next": "13.2.4",
+    "eslint-config-prettier": "8.7.0",
+    "eslint-plugin-cypress": "2.12.1",
+    "eslint-plugin-import": "2.27.5",
+    "eslint-plugin-jest": "27.2.1",
+    "eslint-plugin-node": "11.1.0",
+    "eslint-plugin-prettier": "4.2.1",
+    "eslint-plugin-promise": "6.1.1",
+    "eslint-plugin-standard": "5.0.0",
+    "prettier": "2.8.4"
+  },
+  "dependencies": {
+    "husky": "7.0.4",
+    "lint-staged": "12.3.4"
+  },
+  "packageManager": "yarn@3.3.0"
+}

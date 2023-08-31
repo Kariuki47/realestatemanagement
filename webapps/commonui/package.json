@@ -1,0 +1,45 @@
+{
+  "name": "@realestatemanagement/commonui",
+  "version": "1.0.0",
+  "description": "Common modules required for the RealEstateManagement application'",
+  "author": "Joseph Kariuki",
+  "license": "MIT",
+  "private": true,
+  "dependencies": {
+    "@material-ui/core": "4.12.4",
+    "@material-ui/icons": "4.11.3",
+    "@material-ui/pickers": "3.3.10",
+    "formik": "2.2.9",
+    "moment": "2.29.4",
+    "next": "13.4.4",
+    "next-translate": "2.0.2",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "format": "prettier --write '**/*.{js,jsx,ts,tsx,json,css}'",
+    "generateStrings": "node scripts/extractlocalizedstrings.js",
+    "storybook": "start-storybook -p 6006",
+    "build-storybook": "build-storybook"
+  },
+  "devDependencies": {
+    "@babel/core": "7.21.3",
+    "@storybook/addon-actions": "6.5.16",
+    "@storybook/addon-essentials": "6.5.16",
+    "@storybook/addon-interactions": "6.5.16",
+    "@storybook/addon-links": "6.5.16",
+    "@storybook/addons": "6.5.16",
+    "@storybook/builder-webpack5": "6.5.16",
+    "@storybook/cli": "6.5.16",
+    "@storybook/manager-webpack5": "6.5.16",
+    "@storybook/react": "6.5.16",
+    "@storybook/testing-library": "0.0.13",
+    "eslint": "8.36.0",
+    "eslint-plugin-react": "7.32.2",
+    "next-translate-plugin": "2.0.2",
+    "prop-types": "15.8.1",
+    "require-from-string": "2.0.2",
+    "storybook-addon-material-ui": "0.9.0-alpha.24"
+  }
+}
